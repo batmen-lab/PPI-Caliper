@@ -1,0 +1,5 @@
+[
+  {"repo_id":"danliu1226/PLM-interact-650M-humanV11","repo_type":"model","directory":"PLM-interact-650M-humanV11","revision":"e86e392dec13dd0c23252c94947b04a7a9821b0e","allow_patterns":["pytorch_model.bin","config.json","README.md","LICENSE*"]},
+  {"repo_id":"danliu1226/PLM-interact-650M-humanV12","repo_type":"model","directory":"PLM-interact-650M-humanV12","revision":"2d0e7fb3deef94efa3f217daccc79092a6a42ceb","allow_patterns":["pytorch_model.bin","config.json","README.md","LICENSE*"]},
+  {"repo_id":"facebook/esm2_t33_650M_UR50D","repo_type":"model","directory":"esm2_t33_650M_UR50D","revision":"08e4846e537177426273712802403f7ba8261b6c","allow_patterns":["*.json","*.txt","pytorch_model.bin","README.md","LICENSE*"]}
+]

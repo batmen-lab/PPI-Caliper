@@ -1,0 +1,67 @@
+# Python environments and caches
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[codz]
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Packaging and test output
+build/
+dist/
+*.egg-info/
+*.egg
+.tox/
+.nox/
+.coverage*
+coverage.xml
+htmlcov/
+
+# Local configuration and logs
+.env
+.env.*
+.envrc
+.pypirc
+.DS_Store
+*.log
+
+# Downloaded assets and generated experiments
+/assets/
+/results/
+checkpoints/
+embeddings/
+logs/
+
+# Manuscript sources and publication figures are maintained separately
+/ppi_main*.tex
+/ppi_main.pdf
+/math_commands.tex
+/refs.bib
+/fancyhdr.sty
+/natbib.sty
+/iclr*_conference.sty
+/iclr*_conference.bst
+/fig/
+
+# LaTeX build output
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+
+# Data utilities are tracked; downloaded datasets and caches are not
+/data/*
+!/data/download_data.py
+!/data/preprocess_data.py
+!/data/data_sources.json

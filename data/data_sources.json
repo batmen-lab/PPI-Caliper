@@ -1,0 +1,63 @@
+{
+  "predictions": {
+    "repo_id": "lidehan/PPI-Caliper-predictions",
+    "revision": "e208d39d40eefcbee1ac4bf4d7f8f8acdd6d1155",
+    "files": [
+      "reference/transfer/all_seed_results.csv",
+      "reference/transfer/classification_metrics.csv",
+      "reference/transfer/input_manifest.csv",
+      "reference/transfer/protocol.json",
+      "reference/transfer/split_manifest.csv",
+      "reference/transfer/summary.csv",
+      "reference/within/input_manifest.csv",
+      "reference/within/method1_all_seed_results.csv",
+      "reference/within/method1_summary.csv",
+      "reference/within/protocol.json",
+      "reference/within/split_and_pseudoquery_manifest.csv",
+      "scores/humanv11/ecoli/predictions.csv",
+      "scores/humanv11/fly/predictions.csv",
+      "scores/humanv11/mouse/predictions.csv",
+      "scores/humanv11/worm/predictions.csv",
+      "scores/humanv11/yeast/predictions.csv",
+      "scores/humanv12/ecoli/predictions.csv",
+      "scores/humanv12/fly/predictions.csv",
+      "scores/humanv12/mouse/predictions.csv",
+      "scores/humanv12/worm/predictions.csv",
+      "scores/humanv12/yeast/predictions.csv",
+      "scores/mint/humanv11/ecoli/predictions.csv",
+      "scores/mint/humanv11/fly/predictions.csv",
+      "scores/mint/humanv11/mouse/predictions.csv",
+      "scores/mint/humanv11/worm/predictions.csv",
+      "scores/mint/humanv11/yeast/predictions.csv",
+      "scores/mint/humanv12/ecoli/predictions.csv",
+      "scores/mint/humanv12/fly/predictions.csv",
+      "scores/mint/humanv12/mouse/predictions.csv",
+      "scores/mint/humanv12/worm/predictions.csv",
+      "scores/mint/humanv12/yeast/predictions.csv"
+    ]
+  },
+  "upstream": [
+    {
+      "repo_id": "danliu1226/cross_species_benchmarking",
+      "revision": "19dbed25184466fda5341b5ba70c2560ade1bf85",
+      "directory": "cross_species_benchmarking",
+      "files": [
+        "test/ecoli.ppi.qrels.seq.test.csv",
+        "test/fly.ppi.qrels.seq.test.csv",
+        "test/mouse.ppi.qrels.seq.test.csv",
+        "test/worm.ppi.qrels.seq.test.csv",
+        "test/yeast.ppi.qrels.seq.test.csv",
+        "train/human.ppi.qrels.seq.train.csv",
+        "val/human.ppi.qrels.seq.test.csv"
+      ]
+    },
+    {
+      "repo_id": "danliu1226/STRING_V12_TrainingSet",
+      "revision": "819f938b1c21b8ec4990bb58c1506cff2537e3c2",
+      "directory": "STRING_V12_TrainingSet",
+      "files": [
+        "protein.pairs_human_V12_train.tsv"
+      ]
+    }
+  ]
+}

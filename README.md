@@ -125,12 +125,11 @@ For optional score generation, follow the [PLM-Interact scoring guide](tutorials
 
 This step prepares the inputs for the tutorial and paper experiments. The notebook can run it for you, or you can run the commands below before using the analysis scripts directly. It downloads and verifies the experiment inputs. Skip it when using your own scores.
 
-The prediction scores and saved reference results are hosted in [lidehan/PPI-Caliper-predictions on Hugging Face](https://huggingface.co/datasets/lidehan/PPI-Caliper-predictions). **(TODO: The dataset is currently private.)**
+The prediction scores and reference results are publicly available in [lidehan/PPI-Caliper-predictions on Hugging Face](https://huggingface.co/datasets/lidehan/PPI-Caliper-predictions).
 
-Run these commands to authenticate your Hugging Face account, download and preprocess the pinned release:
+Run these commands from the repository root to download and preprocess the pinned release:
 
 ```bash
-hf auth login
 python data/download_data.py
 python data/preprocess_data.py
 ```

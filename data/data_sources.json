@@ -1,8 +1,19 @@
 {
   "predictions": {
     "repo_id": "lidehan/PPI-Caliper-predictions",
-    "revision": "e208d39d40eefcbee1ac4bf4d7f8f8acdd6d1155",
+    "revision": "58470d29ad6c837effd115990116326d8d712af1",
     "files": [
+      "reference/mint/transfer/all_seed_results.csv",
+      "reference/mint/transfer/classification_metrics.csv",
+      "reference/mint/transfer/input_manifest.csv",
+      "reference/mint/transfer/protocol.json",
+      "reference/mint/transfer/split_manifest.csv",
+      "reference/mint/transfer/summary.csv",
+      "reference/mint/within/input_manifest.csv",
+      "reference/mint/within/method1_all_seed_results.csv",
+      "reference/mint/within/method1_summary.csv",
+      "reference/mint/within/protocol.json",
+      "reference/mint/within/split_and_pseudoquery_manifest.csv",
       "reference/transfer/all_seed_results.csv",
       "reference/transfer/classification_metrics.csv",
       "reference/transfer/input_manifest.csv",

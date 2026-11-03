@@ -57,14 +57,14 @@ Run the Python examples from the repository root. Supply finite scores, with hig
 
 ### Same-species use
 
-Read a labeled calibration set (`score` and binary `label`) and the target pairs you want to screen (`score`). Calibrate once, then select a cutoff for each requested FDR level.
+Read a labeled calibration set (`score` and binary `label`) and the target pairs you want to screen (`score`). The paths below use the E. coli examples created by `data/preprocess_data.py`. Substitute your own CSVs to screen another dataset.
 
 ```python
 import pandas as pd
 from src.PPICaliper import PPICaliper
 
-source = pd.read_csv("calibration.csv")
-target = pd.read_csv("target.csv")
+source = pd.read_csv("data/examples/calibration.csv")
+target = pd.read_csv("data/examples/target.csv")
 caliper = PPICaliper()
 caliper.calibration(source["score"], source["label"], target["score"])
 
@@ -142,4 +142,5 @@ Downloads use the repositories, commit IDs, and file paths in `data/data_sources
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `data/scores/{humanv11,humanv12}/{species}/predictions.csv`      | Ten PLM-Interact prediction tables                                            |
 | `data/scores/mint/{humanv11,humanv12}/{species}/predictions.csv` | Ten normalized MINT prediction tables                                         |
-| `data/reference/{within,transfer}/`                           | Frozen PLM-Interact results, summaries, split hashes and experiment protocols |
+| `data/reference/{within,transfer}/`                              | PLM-Interact reference results, summaries, split hashes and protocols (100 splits) |
+| `data/reference/mint/{within,transfer}/`                         | MINT reference results, summaries, split hashes and protocols (30 splits) |

@@ -2,8 +2,9 @@
 from argparse import Namespace
 
 import torch
-from mint.helpers.extract import MINTWrapper
+from mint.helpers.extract import CollateFn, MINTWrapper
 from mint.helpers.predict import SimpleMLP
+from tqdm import tqdm
 
 ENCODER_CONFIG = Namespace(
     encoder_layers=33,
@@ -19,6 +20,14 @@ def load_encoder(checkpoint, device):
             ENCODER_CONFIG, checkpoint, freeze_percent=1.0,
             use_multimer=True, sep_chains=True, device=device,
         ).eval()
+
+
+def embedding_batches(encoder, dataset, device, batch_size, description):
+    """Yield embeddings on the encoder's device in input order."""
+    loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False,
+                                         collate_fn=CollateFn())
+    for chains, chain_ids in tqdm(loader, desc=description):
+        yield encoder(chains.to(device), chain_ids.to(device))
 
 
 def load_head(checkpoint, device):

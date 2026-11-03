@@ -30,10 +30,8 @@ def main(args):
     output = args.output_dir or RESULTS_DIR / "embeddings" / args.version
 
     import torch
-    from mint.helpers.extract import CollateFn
-    from tqdm import tqdm
     from computing_scores.mint.data import PairDataset
-    from computing_scores.mint.model import load_encoder
+    from computing_scores.mint.model import embedding_batches, load_encoder
 
     random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -42,12 +40,8 @@ def main(args):
     with torch.inference_mode():
         for split, path in inputs.items():
             dataset = PairDataset(path, args.max_seq_length)
-            loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=False,
-                                               collate_fn=CollateFn())
-            chunks = []
-            for chains, chain_ids in tqdm(loader, desc=split):
-                chunks.append(encoder(chains.to(args.device), chain_ids.to(args.device)).cpu())
-            embeddings = torch.cat(chunks)
+            batches = embedding_batches(encoder, dataset, args.device, args.batch_size, split)
+            embeddings = torch.cat([batch.cpu() for batch in batches])
             torch.save({"embeddings": embeddings,
                         "labels": torch.tensor(dataset.frame["label"].to_numpy())}, output / f"{split}.pt")
     print(f"Wrote embeddings to {output}")

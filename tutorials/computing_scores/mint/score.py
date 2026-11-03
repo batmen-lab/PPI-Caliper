@@ -35,10 +35,8 @@ def main(args):
     import numpy as np
     import pandas as pd
     import torch
-    from mint.helpers.extract import CollateFn
-    from tqdm import tqdm
     from computing_scores.mint.data import PairDataset
-    from computing_scores.mint.model import load_encoder, load_head
+    from computing_scores.mint.model import embedding_batches, load_encoder, load_head
 
     encoder = load_encoder(args.encoder, args.device)
     head = load_head(head_file, args.device)
@@ -47,11 +45,9 @@ def main(args):
             random.seed(args.seed)
             torch.manual_seed(args.seed)
             dataset = PairDataset(path, args.max_seq_length)
-            loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=False,
-                                               collate_fn=CollateFn())
+            batches = embedding_batches(encoder, dataset, args.device, args.batch_size, name)
             scores = []
-            for chains, chain_ids in tqdm(loader, desc=name):
-                embeddings = encoder(chains.to(args.device), chain_ids.to(args.device))
+            for embeddings in batches:
                 scores.append(torch.sigmoid(head(embeddings).squeeze(-1)).cpu().numpy())
             values = np.concatenate(scores)
             result = pd.DataFrame({"row_idx": np.arange(len(dataset)), "p_ab": values})

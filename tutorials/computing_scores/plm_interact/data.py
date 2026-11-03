@@ -14,13 +14,9 @@ def normalize_sequence(value: object) -> str:
     return "".join(str(value).split()).upper()
 
 
-def load_ppi_frame(path: Path) -> pd.DataFrame:
-    frame = pd.read_csv(path)
-    required = {"query", "text", "label"}
-    missing = required.difference(frame.columns)
-    if missing:
-        raise ValueError(f"{path}: missing columns {sorted(missing)}")
-    frame = frame.loc[:, ["query", "text", "label"]].copy()
+def load_ppi_frame(path: Path, max_length: int) -> tuple[pd.DataFrame, int]:
+    """Return eligible pairs with original row indices, and the total input count."""
+    frame = pd.read_csv(path, usecols=["query", "text", "label"])
     frame["query"] = frame["query"].map(normalize_sequence)
     frame["text"] = frame["text"].map(normalize_sequence)
     frame["label"] = frame["label"].astype(int)
@@ -30,9 +26,5 @@ def load_ppi_frame(path: Path) -> pd.DataFrame:
     frame["len_pair_ab"] = (
         frame["query"].str.len() + frame["text"].str.len() + SPECIAL_TOKENS
     )
-    return frame
-
-
-def eligible_frame(frame: pd.DataFrame, max_length: int) -> tuple[pd.DataFrame, int]:
     keep = frame["len_pair_ab"] <= max_length
-    return frame.loc[keep].copy().reset_index(drop=True), int((~keep).sum())
+    return frame.loc[keep].reset_index(drop=True), len(frame)

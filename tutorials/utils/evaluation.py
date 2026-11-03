@@ -28,7 +28,8 @@ def mean_confidence_interval(values: np.ndarray) -> tuple[float, float, float, f
     values = np.asarray(values, dtype=np.float64)
     n = len(values)
     mean = float(values.mean())
-    sd = float(values.std(ddof=1)) if n > 1 else 0.0
-    critical = float(student_t.ppf(0.975, df=n - 1)) if n > 1 else 0.0
-    margin = critical * sd / np.sqrt(n) if n > 1 else 0.0
+    if n == 1:
+        return mean, 0.0, mean, mean
+    sd = float(values.std(ddof=1))
+    margin = student_t.ppf(0.975, df=n - 1) * sd / np.sqrt(n)
     return mean, sd, max(0.0, mean - margin), min(1.0, mean + margin)

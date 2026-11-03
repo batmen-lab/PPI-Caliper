@@ -1,8 +1,7 @@
 """Paths for MINT training inputs, checkpoints, and prediction scores."""
 from pathlib import Path
 
-from utils.paths import PROJECT_ROOT
-from utils.inputs import SPECIES
+from utils.inputs import PROJECT_ROOT, SPECIES
 
 RAW_ROOT = PROJECT_ROOT / "data" / "raw"
 CHECKPOINT_ROOT = PROJECT_ROOT / "data" / "checkpoints" / "mint"

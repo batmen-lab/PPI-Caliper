@@ -2,13 +2,12 @@
 
 from pathlib import Path
 
-from utils.inputs import PLM_CHECKPOINTS, SPECIES
-from utils.paths import PROJECT_ROOT
+from utils.inputs import CHECKPOINTS, PROJECT_ROOT, SPECIES
 
 RAW_ROOT = PROJECT_ROOT / "data" / "raw"
 CHECKPOINT_ROOT = PROJECT_ROOT / "data" / "checkpoints" / "plm_interact"
 RESULTS_DIR = PROJECT_ROOT / "results" / "plm-interact"
-MODEL_REPOSITORIES = dict(PLM_CHECKPOINTS)
+MODEL_REPOSITORIES = CHECKPOINTS["plm-interact"]
 BASE_MODEL = "facebook/esm2_t33_650M_UR50D"
 EMBEDDING_SIZE = 1280
 SPECIAL_TOKENS = 3

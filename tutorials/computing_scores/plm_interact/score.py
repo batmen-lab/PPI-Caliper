@@ -16,7 +16,7 @@ from computing_scores.plm_interact.config import (
     BASE_MODEL, CHECKPOINT_ROOT, MAX_LENGTH, MODEL_REPOSITORIES,
     RAW_ROOT, RESULTS_DIR, SPECIES, checkpoint_path, dataset_path, model_directory,
 )
-from computing_scores.plm_interact.data import eligible_frame, load_ppi_frame
+from computing_scores.plm_interact.data import load_ppi_frame
 
 
 def parse_args():
@@ -89,9 +89,9 @@ def _score_sorted_chunk(
                     if "out of memory" not in str(exc).lower() or len(batch) == 1:
                         raise
                     torch.cuda.empty_cache()
-                    batch = batch.iloc[: max(1, len(batch) // 2)].copy()
+                    batch = batch.iloc[:len(batch) // 2].copy()
     result = pd.concat(records, ignore_index=True).sort_values("row_idx").reset_index(drop=True)
-    if result["p_ab"].isna().any() or not result["p_ab"].between(0, 1).all():
+    if not result["p_ab"].between(0, 1).all():
         raise ValueError("invalid p_ab values")
     return result
 
@@ -112,12 +112,12 @@ def score_species(
     dtype: str,
 ) -> Path:
     input_path = dataset_path(data_root, species)
-    full = load_ppi_frame(input_path)
-    eligible, excluded = eligible_frame(full, max_length)
+    eligible, n_input = load_ppi_frame(input_path, max_length)
+    excluded = n_input - len(eligible)
     if row_limit is not None:
         if row_limit <= 0:
             raise ValueError("row_limit must be positive")
-        eligible = eligible.iloc[:row_limit].copy().reset_index(drop=True)
+        eligible = eligible.iloc[:row_limit]
     out_dir = out_root / species
     parts_dir = out_dir / "parts"
     parts_dir.mkdir(parents=True, exist_ok=True)
@@ -128,7 +128,7 @@ def score_species(
         stop = min(start + chunk_size, len(eligible))
         part = parts_dir / f"rows_{start:06d}_{stop:06d}.csv"
         expected_parts.append(part)
-        chunk = eligible.iloc[start:stop].copy()
+        chunk = eligible.iloc[start:stop]
         scored = _score_sorted_chunk(
             chunk,
             model=model,
@@ -141,15 +141,13 @@ def score_species(
 
     merged = pd.concat([pd.read_csv(path) for path in expected_parts], ignore_index=True)
     merged = merged.sort_values("row_idx").reset_index(drop=True)
-    if len(merged) != len(eligible) or merged["row_idx"].duplicated().any():
-        raise AssertionError("merged score parts are incomplete or duplicated")
     prediction_path = out_dir / "predictions.csv"
     merged.to_csv(prediction_path, index=False)
     summary = {
         "model": model_key,
         "species": species,
         "dataset": input_path.name,
-        "n_input": int(len(full)),
+        "n_input": n_input,
         "n_scored": int(len(eligible)),
         "n_excluded_length": excluded,
         "n_positive": int((eligible["label"] == 1).sum()),

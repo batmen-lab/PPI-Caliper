@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check prediction tables and prepare labeled/unlabeled CLI examples.
+"""Check prediction tables and prepare labeled/unlabeled Quick Start examples.
 
 Optional --mint-v11/--mint-v12 converts original MINT ZIPs into the common
 row_idx,label,len_pair_ab,p_ab schema without shuffling or deduplicating pairs.
@@ -8,40 +8,23 @@ import argparse
 import csv
 import io
 import json
-import math
 import random
 import shutil
 import tempfile
 import zipfile
-from pathlib import Path, PurePosixPath
-from download_data import upstream_files
+from pathlib import Path
+from download_data import safe_output, upstream_files
 
 DATA_DIR = Path(__file__).resolve().parent
 SPECIES = ('ecoli', 'fly', 'mouse', 'worm', 'yeast')
 
-def safe_output(root, name):
-    relative = PurePosixPath(name)
-    if (not isinstance(name, str) or relative.is_absolute() or '..' in relative.parts
-            or '\\' in name or not relative.parts or relative.as_posix() != name):
-        raise ValueError(f'Unsafe archive path: {name}')
-    path = Path(root).absolute().joinpath(*relative.parts)
-    if path.is_symlink() or any(p.is_symlink() for p in path.parents):
-        raise ValueError(f'Symbolic link in destination: {path}')
-    return path
-
 def convert_mint(archive, version, destination):
     """Convert all five species without reordering rows or replacing other data."""
-    if version not in ('v11', 'v12'):
-        raise ValueError('MINT version must be v11 or v12')
     destination = Path(destination).absolute()
     with zipfile.ZipFile(archive) as z, tempfile.TemporaryDirectory(prefix='ppi-mint-') as temp:
         names = z.namelist()
         if len(names) != len(set(names)):
             raise ValueError('MINT archive contains duplicate member names')
-        missing = [f'result_{version}/{s}.ppi.qrels.seq.test_result.csv' for s in SPECIES
-                   if f'result_{version}/{s}.ppi.qrels.seq.test_result.csv' not in names]
-        if missing:
-            raise ValueError(f'MINT archive is missing required species files: {", ".join(missing)}')
         staged = []
         for species in SPECIES:
             name = f'result_{version}/{species}.ppi.qrels.seq.test_result.csv'
@@ -50,19 +33,13 @@ def convert_mint(archive, version, destination):
                 columns = reader.fieldnames or []
                 if len(columns) != len(set(columns)):
                     raise ValueError(f'Duplicate columns: {name}')
-                required = {'query', 'text', 'label', 'mint_score'}
-                if not required.issubset(columns): raise ValueError(f'Missing columns: {name}')
                 output = safe_output(destination, f'scores/mint/human{version}/{species}/predictions.csv')
                 temporary = Path(temp) / f'{species}.csv'
                 with temporary.open('w', newline='') as out:
                     writer = csv.writer(out); writer.writerow(['row_idx','label','len_pair_ab','p_ab'])
                     count = 0
                     for idx, row in enumerate(reader):
-                        try:
-                            score = float(row['mint_score'])
-                        except (TypeError, ValueError):
-                            raise ValueError(f'Invalid MINT score: {name}, row {idx}') from None
-                        if None in row or row['label'] not in ('0','1') or not math.isfinite(score) or not 0 <= score <= 1:
+                        if None in row or row['label'] not in ('0','1') or not 0 <= float(row['mint_score']) <= 1:
                             raise ValueError(f'Invalid label or score: {name}, row {idx}')
                         if not row['query'] or not row['text']: raise ValueError(f'Empty sequence: {name}, row {idx}')
                         writer.writerow([idx,row['label'],len(row['query'])+len(row['text']),row['mint_score']])
@@ -90,11 +67,8 @@ def verify_data(destination):
                     if reader.fieldnames != ['row_idx','label','len_pair_ab','p_ab']:
                         raise ValueError(f'Unexpected prediction columns: {path}')
                     for idx, row in enumerate(reader):
-                        try:
-                            score = float(row['p_ab']); row_idx = int(row['row_idx']); pair_length = int(row['len_pair_ab'])
-                        except (TypeError, ValueError):
-                            raise ValueError(f'Invalid prediction row {idx}: {path}') from None
-                        if None in row or pair_length <= 0 or row_idx != idx or row['label'] not in ('0','1') or not math.isfinite(score) or not 0 <= score <= 1:
+                        if (None in row or int(row['len_pair_ab']) <= 0 or int(row['row_idx']) != idx
+                                or row['label'] not in ('0','1') or not 0 <= float(row['p_ab']) <= 1):
                             raise ValueError(f'Invalid prediction row {idx}: {path}')
                         count += 1
                     expected = 22000 if species == 'ecoli' else 55000
@@ -132,7 +106,7 @@ def prepare_example(destination, seed):
         with path.open('w',newline='') as handle:
             writer=csv.DictWriter(handle,fieldnames=columns); writer.writeheader()
             for row in items: writer.writerow({key: row['p_ab'] if key == 'score' else row[key] for key in columns})
-    safe_output(out,'README.txt').write_text(f'CLI example, seed {seed}: separate calibration and target halves of humanV11 E. coli scores.\n')
+    safe_output(out,'README.txt').write_text(f'Quick Start example, seed {seed}: separate calibration and target halves of humanV11 E. coli scores.\n')
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -145,21 +119,18 @@ def main():
     parser.add_argument('--example-seed', type=int, default=0)
     args = parser.parse_args()
     destination = args.data_dir.absolute()
-    try:
+    if args.with_upstream or args.only_upstream:
         config = json.loads((DATA_DIR / 'data_sources.json').read_text())
-        if args.with_upstream or args.only_upstream:
-            prepared = prepare_csv_inputs(destination, config)
-            print(f'Prepared {len(prepared)} training CSV files.')
-        if not args.only_upstream:
-            for version in ('v11', 'v12'):
-                archive = getattr(args, 'mint_' + version)
-                if archive:
-                    convert_mint(archive, version, destination)
-            count = verify_data(destination)
-            prepare_example(destination, args.example_seed)
-            print(f'Checked {count} prediction tables. CLI examples: {destination / "examples"}')
-    except (ValueError, OSError, KeyError, zipfile.BadZipFile) as exc:
-        parser.error(str(exc))
+        prepared = prepare_csv_inputs(destination, config)
+        print(f'Prepared {len(prepared)} training CSV files.')
+    if not args.only_upstream:
+        for version in ('v11', 'v12'):
+            archive = getattr(args, 'mint_' + version)
+            if archive:
+                convert_mint(archive, version, destination)
+        count = verify_data(destination)
+        prepare_example(destination, args.example_seed)
+        print(f'Checked {count} prediction tables. Quick Start examples: {destination / "examples"}')
 
 if __name__ == '__main__':
     main()

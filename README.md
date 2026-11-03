@@ -1,6 +1,6 @@
 # PPI-Caliper
 
-**PPI-Caliper** selects interaction-score thresholds for requested false discovery rate (FDR) levels. Give it a **labeled calibration set** and **unlabeled target scores**; it returns a **two-column threshold table**.
+**PPI-Caliper** selects interaction-score thresholds for requested false discovery rate (FDR) levels. Give it a **labeled calibration set** and **unlabeled target scores**; it selects a raw-score cutoff for each requested FDR level.
 
 The repository also contains the PLM-Interact and MINT workflows used to compute scores, run within-species calibration, and evaluate cross-species threshold transfer. PLM-Interact uses the authors' released checkpoints while MINT trains a downstream MLP head on frozen encoder embeddings.
 
@@ -34,8 +34,7 @@ PPI-Caliper/
 ├── results/                      # generated outputs; excluded from Git
 ├── requirements.txt
 ├── src/
-│   ├── PPICaliper.py              # reusable calibration class
-│   └── run_PPICaliper.py          # command-line runner
+│   └── PPICaliper.py             # reusable calibration class
 └── tutorials/
     ├── tutorial.ipynb            # paper walkthrough
     ├── computing_scores/
@@ -54,48 +53,62 @@ The `data/` directory contains the download and preprocessing utilities and thei
 
 ## Quick Start
 
-Commands below use default calibration settings. See the tutorial for the sampling procedure and use `--help` to view available options.
+Run the Python examples from the repository root. Supply finite scores, with higher values indicating stronger evidence of interaction. The examples use a column named `score`; the supplied prediction tables name it `p_ab`.
 
 ### Same-species use
 
-After [installation](#installation), prepare labeled calibration scores and a separate set of target scores from the same species. From the repository root, run the command below to select thresholds for your requested FDR levels:
+Read a labeled calibration set (`score` and binary `label`) and the target pairs you want to screen (`score`). Calibrate once, then select a cutoff for each requested FDR level.
 
-```bash
-python src/run_PPICaliper.py calibrate --calibration calibration.csv --target target.csv --target-fdr 0.1 0.2 0.3 --out thresholds.csv
+```python
+import pandas as pd
+from src.PPICaliper import PPICaliper
+
+source = pd.read_csv("calibration.csv")
+target = pd.read_csv("target.csv")
+caliper = PPICaliper()
+caliper.calibration(source["score"], source["label"], target["score"])
+
+cutoffs = {}
+for q in [0.1, 0.2, 0.3]:
+    threshold = caliper.select_quantile_threshold(q)
+    cutoffs[q] = caliper.find_raw_score_cutoff(threshold)
+
+selected_pairs = target.loc[target["score"] >= cutoffs[0.1]]
+thresholds = pd.DataFrame(cutoffs.items(), columns=["target_fdr", "cutoff_score"])
+thresholds.to_csv("thresholds.csv", index=False)
 ```
 
-- `calibration.csv` contains `score,label`
-  - Calibration labels are 0 or 1;
-  - Higher scores indicate stronger evidence for interaction.
-- `target.csv` contains `score`.
-- `thresholds.csv` has two columns, `target_fdr` and `cutoff_score`.
-
-Use `--score-column p_ab` for the supplied prediction tables or `--score-column mint_score` for original MINT prediction files. Set `--target-score-column` if the target scores use a different column name.
-
-Select target pairs whose prediction scores are greater than or equal to the returned threshold. The threshold applies directly to the original prediction scores in your target file. Run PPI-Caliper again when using a different target file. A threshold of `inf` means no pairs are selected for that requested FDR level.
+The raw cutoff applies to the target batch passed to `calibration()`. A cutoff of `inf` selects zero pairs. Call `calibration()` again when using a different target batch.
 
 ### Cross-species use
 
-For cross-species use, provide a separate sample of target-species scores with `--target-mapping`. PPI-Caliper learns the target species’ mapping from this sample and applies the quantile threshold selected using the labeled source-species calibration data:
+Use source-species scores and labels to select the quantile threshold. Supply a separate sample of unlabeled target-species scores to fit the target mapping. The raw cutoff applies to the held-out target pairs.
 
-```bash
-python src/run_PPICaliper.py calibrate --calibration source_calibration.csv --target-mapping target_mapping.csv --target target_test.csv --target-fdr 0.1 0.2 0.3 --out thresholds.csv
+```python
+import pandas as pd
+from src.PPICaliper import PPICaliper
+
+source = pd.read_csv("source_calibration.csv")
+mapping = pd.read_csv("target_mapping.csv")
+target = pd.read_csv("target_test.csv")
+
+caliper = PPICaliper()
+caliper.calibration(
+    source["score"], source["label"], target["score"],
+    target_mapping_scores=mapping["score"],
+)
+threshold = caliper.select_quantile_threshold(0.1)
+cutoff = caliper.find_raw_score_cutoff(threshold)
+selected_pairs = target.loc[target["score"] >= cutoff]
 ```
 
-- `source_calibration.csv` contains `score,label` from the source species.
-  - Calibration labels are 0 or 1.
-  - Higher scores indicate stronger evidence for interaction.
-- `target_mapping.csv` contains `score` from the target species, used to learn its score-to-quantile mapping.
-- `target_test.csv` contains `score` for the target-species pairs you want to select.
-- `thresholds.csv` has two columns, `target_fdr` and `cutoff_score`. Apply each threshold directly to the scores in `target_test.csv`.
-
-Use separate samples from the target species for `target_mapping.csv` and `target_test.csv` when reproducing the paper’s held-out evaluation. Neither target file requires labels; keep the test labels separately if you want to measure FDP and power afterward. Cross-species FDR control is evaluated empirically and is not guaranteed for arbitrary differences between species.
+Keep target test labels for evaluating FDP and power after selection. Cross-species FDR control is evaluated empirically and can fail under distribution shift.
 
 ## Reproducing the Paper Results
 
 ### Tutorial
 
-Run [tutorials/tutorial.ipynb](tutorials/tutorial.ipynb). It starts with data setup and same-species and cross-species examples, then reproduces within-species and across-species results. An optional section covers score generation and MINT head training.
+The [tutorial notebook](tutorials/tutorial.ipynb) starts with two threshold examples. Section 4 saves the benchmark tables. Sections 5.1 and 5.2 use those tables to draw the within-species and across-species figures. Change the source and target species in the transfer example to explore another direction. The notebook and command-line experiments share the [within-species](tutorials/within_species/plot.py) and [across-species](tutorials/transfer_species/plot.py) plotting functions.
 
 Launch the notebook tutorial:
 
@@ -104,9 +117,9 @@ python -m pip install jupyterlab
 python -m jupyter lab tutorials/tutorial.ipynb
 ```
 
-The notebook includes saved tables and figures from 100 random splits with PLM-Interact scores and 30 with MINT scores. Running it regenerates the results in `results/tutorial/paper/`.
+The benchmark uses 100 splits for PLM-Interact and 30 for MINT and writes the tables to `results/tutorial/paper/`. Set `RERUN_EXPERIMENTS = False` after the first run to redraw figures from those tables. To export the grids and their individual panels as PNGs and PDFs, run the corresponding experiment script with `--plots-only`, the predictor, and its existing output directory.
 
-For optional score generation, follow the [PLM-Interact scoring guide](tutorials/computing_scores/plm_interact/README.md) or the [MINT training and scoring guide](tutorials/computing_scores/mint/README.md). MINT V12 results currently differ from the paper.
+For optional score generation, follow the [PLM-Interact scoring guide](tutorials/computing_scores/plm_interact/README.md) or the [MINT training and scoring guide](tutorials/computing_scores/mint/README.md).
 
 ### Download and preprocess the paper data
 
@@ -122,7 +135,7 @@ python data/download_data.py
 python data/preprocess_data.py
 ```
 
-Downloads use the repositories, commit IDs, and file paths in `data/data_sources.json`. Preprocessing checks the prediction tables and prepares the example inputs. The tutorial downloads original sequences from Dan Liu’s datasets for optional score generation and training.
+Downloads use the repositories, commit IDs, and file paths in `data/data_sources.json`. Preprocessing checks row indices, labels, and score ranges and prepares the example inputs. The experiment scripts read those verified tables directly. The tutorial downloads original sequences from Dan Liu’s datasets for optional score generation and training.
 
 
 | Downloaded files                                                 | Purpose                                                                       |
